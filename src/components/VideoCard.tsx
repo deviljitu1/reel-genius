@@ -1,0 +1,85 @@
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
+import { StatusBadge } from "./StatusBadge";
+import { Play, Clock, Tag } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+
+interface VideoCardProps {
+  video: {
+    id: string;
+    topic: string;
+    duration: number;
+    style: string;
+    status: string;
+    video_url: string | null;
+    created_at: string;
+  };
+}
+
+export const VideoCard = ({ video }: VideoCardProps) => {
+  const navigate = useNavigate();
+
+  return (
+    <Card
+      onClick={() => navigate(`/result/${video.id}`)}
+      className="group cursor-pointer overflow-hidden border-border hover:border-primary/50 transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-card"
+    >
+      <CardContent className="p-0">
+        {/* Thumbnail */}
+        <div className="relative aspect-[9/16] bg-gradient-subtle overflow-hidden">
+          {video.video_url && video.status === 'COMPLETED' ? (
+            <video
+              src={video.video_url}
+              className="w-full h-full object-cover"
+              muted
+              playsInline
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-primary">
+              <Play className="w-16 h-16 text-white/80" />
+            </div>
+          )}
+          
+          {/* Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          
+          {/* Status Badge */}
+          <div className="absolute top-3 right-3">
+            <StatusBadge status={video.status} />
+          </div>
+
+          {/* Play Button on Hover */}
+          {video.status === 'COMPLETED' && (
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                <Play className="w-8 h-8 text-white fill-white" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="p-4 space-y-3">
+          <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-primary transition-colors">
+            {video.topic}
+          </h3>
+          
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              <span>{video.duration}s</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Tag className="w-4 h-4" />
+              <span className="capitalize">{video.style}</span>
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            {formatDistanceToNow(new Date(video.created_at), { addSuffix: true })}
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
