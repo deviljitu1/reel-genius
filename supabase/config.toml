@@ -1,1 +1,4 @@
 project_id = "hyvurywqsopvohmnyuvv"
+
+[functions.generate-reel]
+verify_jwt = false
