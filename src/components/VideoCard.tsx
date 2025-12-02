@@ -19,6 +19,19 @@ interface VideoCardProps {
 export const VideoCard = ({ video }: VideoCardProps) => {
   const navigate = useNavigate();
 
+  // Helper to get the first video URL if it's a JSON array
+  const getVideoSrc = (url: string | null) => {
+    if (!url) return undefined;
+    try {
+      const parsed = JSON.parse(url);
+      return Array.isArray(parsed) ? parsed[0] : url;
+    } catch {
+      return url;
+    }
+  };
+
+  const videoSrc = getVideoSrc(video.video_url);
+
   return (
     <Card
       onClick={() => navigate(`/result/${video.id}`)}
@@ -27,22 +40,27 @@ export const VideoCard = ({ video }: VideoCardProps) => {
       <CardContent className="p-0">
         {/* Thumbnail */}
         <div className="relative aspect-[9/16] bg-gradient-subtle overflow-hidden">
-          {video.video_url && video.status === 'COMPLETED' ? (
+          {videoSrc && video.status === 'COMPLETED' ? (
             <video
-              src={video.video_url}
+              src={videoSrc}
               className="w-full h-full object-cover"
               muted
               playsInline
+              onMouseOver={(e) => e.currentTarget.play()}
+              onMouseOut={(e) => {
+                e.currentTarget.pause();
+                e.currentTarget.currentTime = 0;
+              }}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-primary">
               <Play className="w-16 h-16 text-white/80" />
             </div>
           )}
-          
+
           {/* Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          
+
           {/* Status Badge */}
           <div className="absolute top-3 right-3">
             <StatusBadge status={video.status} />
@@ -50,7 +68,7 @@ export const VideoCard = ({ video }: VideoCardProps) => {
 
           {/* Play Button on Hover */}
           {video.status === 'COMPLETED' && (
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
               <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
                 <Play className="w-8 h-8 text-white fill-white" />
               </div>
@@ -63,7 +81,7 @@ export const VideoCard = ({ video }: VideoCardProps) => {
           <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-primary transition-colors">
             {video.topic}
           </h3>
-          
+
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
