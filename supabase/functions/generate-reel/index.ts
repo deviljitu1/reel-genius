@@ -133,13 +133,71 @@ Requirements:
         console.log('Using Pexels video:', videoUrl);
       }
     }
+    // Step 3: Generate TTS audio using Lovable AI (text-to-speech)
+    console.log('Generating voiceover audio...');
+    let audioContent = null;
+    
+    try {
+      // Use ElevenLabs API for TTS if available
+      const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
+      
+      if (ELEVENLABS_API_KEY) {
+        const ttsResponse = await fetch('https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM', {
+          method: 'POST',
+          headers: {
+            'xi-api-key': ELEVENLABS_API_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            text: script,
+            model_id: 'eleven_multilingual_v2',
+            voice_settings: {
+              stability: 0.5,
+              similarity_boost: 0.75
+            }
+          }),
+        });
+
+        if (ttsResponse.ok) {
+          const audioBuffer = await ttsResponse.arrayBuffer();
+          const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
+          audioContent = `data:audio/mpeg;base64,${base64Audio}`;
+          console.log('Audio generated successfully');
+        } else {
+          console.log('TTS API error:', ttsResponse.status, await ttsResponse.text());
+        }
+      } else {
+        console.log('No ELEVENLABS_API_KEY found, skipping audio generation');
+      }
+    } catch (audioError) {
+      console.error('Audio generation failed:', audioError);
+      // Continue without audio
+    }
+
+    // Step 4: Update database with all generated content
+    console.log('Saving to database...');
+    const { error: updateError } = await supabaseClient
+      .from('videos')
+      .update({
+        script: script,
+        video_url: videoUrl,
+        audio_content: audioContent,
+        status: 'COMPLETED'
+      })
+      .eq('id', videoId);
+
+    if (updateError) {
+      throw new Error('Failed to update video: ' + updateError.message);
+    }
+
     console.log('Video generation completed successfully');
 
     return new Response(
       JSON.stringify({
         success: true,
         message: 'Video generated successfully',
-        videoId
+        videoId,
+        hasAudio: !!audioContent
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
