@@ -88,7 +88,8 @@ Requirements:
 - Each line should be impactful and engaging.
 - Style: ${video.style}
 - Format: Return each line on a new line, no numbering.
-- Make it viral-worthy and attention-grabbing.`;
+- Make it viral-worthy and attention-grabbing.
+- CRITICAL: Output ONLY the spoken words for the voiceover. Do NOT include scene descriptions, visual cues, camera directions, or parentheticals like (Close up) or (Music swells). Just the raw text to be spoken.`;
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
