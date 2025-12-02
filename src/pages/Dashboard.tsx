@@ -23,7 +23,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchVideos();
-    
+
     // Set up real-time subscription for video status updates
     const channel = supabase
       .channel('videos')
@@ -58,6 +58,22 @@ const Dashboard = () => {
       toast.error('Failed to load videos: ' + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteVideo = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('videos')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setVideos(videos.filter(v => v.id !== id));
+      toast.success('Video deleted successfully');
+    } catch (error: any) {
+      toast.error('Failed to delete video: ' + error.message);
     }
   };
 
@@ -112,7 +128,11 @@ const Dashboard = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {videos.map((video) => (
-              <VideoCard key={video.id} video={video} />
+              <VideoCard
+                key={video.id}
+                video={video}
+                onDelete={handleDeleteVideo}
+              />
             ))}
           </div>
         )}
