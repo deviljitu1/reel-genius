@@ -63,17 +63,18 @@ const Dashboard = () => {
 
   const handleDeleteVideo = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('videos')
-        .delete()
-        .eq('id', id);
+      // Use Edge Function to delete video (bypasses RLS if needed)
+      const { error } = await supabase.functions.invoke('delete-video', {
+        body: { videoId: id }
+      });
 
       if (error) throw error;
 
       setVideos(videos.filter(v => v.id !== id));
       toast.success('Video deleted successfully');
     } catch (error: any) {
-      toast.error('Failed to delete video: ' + error.message);
+      console.error('Delete error:', error);
+      toast.error('Failed to delete video: ' + (error.message || 'Unknown error'));
     }
   };
 
