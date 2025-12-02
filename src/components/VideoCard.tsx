@@ -1,8 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatusBadge } from "./StatusBadge";
-import { Play, Clock, Tag } from "lucide-react";
+import { Play, Clock, Tag, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { Button } from "./ui/button";
 
 interface VideoCardProps {
   video: {
@@ -14,9 +15,10 @@ interface VideoCardProps {
     video_url: string | null;
     created_at: string;
   };
+  onDelete: (id: string) => void;
 }
 
-export const VideoCard = ({ video }: VideoCardProps) => {
+export const VideoCard = ({ video, onDelete }: VideoCardProps) => {
   const navigate = useNavigate();
 
   // Helper to get the first video URL if it's a JSON array
@@ -32,10 +34,17 @@ export const VideoCard = ({ video }: VideoCardProps) => {
 
   const videoSrc = getVideoSrc(video.video_url);
 
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this video?")) {
+      onDelete(video.id);
+    }
+  };
+
   return (
     <Card
       onClick={() => navigate(`/result/${video.id}`)}
-      className="group cursor-pointer overflow-hidden border-border hover:border-primary/50 transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-card"
+      className="group cursor-pointer overflow-hidden border-border hover:border-primary/50 transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-card relative"
     >
       <CardContent className="p-0">
         {/* Thumbnail */}
@@ -64,6 +73,19 @@ export const VideoCard = ({ video }: VideoCardProps) => {
           {/* Status Badge */}
           <div className="absolute top-3 right-3">
             <StatusBadge status={video.status} />
+          </div>
+
+          {/* Delete Button - Always visible on top left */}
+          <div className="absolute top-3 left-3 z-10">
+            <Button
+              variant="destructive"
+              size="icon"
+              className="h-8 w-8 rounded-full shadow-lg opacity-90 hover:opacity-100 transition-opacity"
+              onClick={handleDelete}
+              title="Delete Video"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
 
           {/* Play Button on Hover */}
