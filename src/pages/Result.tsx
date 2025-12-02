@@ -129,8 +129,18 @@ const Result = () => {
     setRenderProgress(0);
 
     try {
+      let videoSource: string | string[] = video.video_url;
+      try {
+        const parsed = JSON.parse(video.video_url);
+        if (Array.isArray(parsed)) {
+          videoSource = parsed;
+        }
+      } catch (e) {
+        // Not a JSON array, treat as single URL
+      }
+
       const blob = await ffmpegService.renderVideo(
-        video.video_url,
+        videoSource,
         video.audio_content,
         editedScript,
         video.duration,
@@ -232,7 +242,14 @@ const Result = () => {
                   <>
                     <video
                       ref={videoRef}
-                      src={video.video_url}
+                      src={(() => {
+                        try {
+                          const parsed = JSON.parse(video.video_url);
+                          return Array.isArray(parsed) ? parsed[0] : video.video_url;
+                        } catch {
+                          return video.video_url;
+                        }
+                      })()}
                       className="w-full h-full object-cover"
                       playsInline
                       onEnded={handleVideoEnded}

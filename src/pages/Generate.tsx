@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Sparkles, Loader2, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 
 const Generate = () => {
   const navigate = useNavigate();
   const [topic, setTopic] = useState("");
+  const [articleUrl, setArticleUrl] = useState("");
   const [duration, setDuration] = useState("30");
   const [style, setStyle] = useState("motivational");
   const [generating, setGenerating] = useState(false);
@@ -39,7 +40,10 @@ const Generate = () => {
 
       // Call edge function to generate video
       const { error: functionError } = await supabase.functions.invoke('generate-reel', {
-        body: { videoId: video.id }
+        body: {
+          videoId: video.id,
+          articleUrl: articleUrl.trim() || undefined
+        }
       });
 
       if (functionError) throw functionError;
@@ -98,6 +102,25 @@ const Generate = () => {
                 />
                 <p className="text-sm text-muted-foreground">
                   What should your reel be about?
+                </p>
+              </div>
+
+              {/* Article URL Input */}
+              <div className="space-y-2">
+                <Label htmlFor="articleUrl" className="text-lg font-semibold flex items-center gap-2">
+                  <LinkIcon className="w-4 h-4" />
+                  Article URL (Optional)
+                </Label>
+                <Input
+                  id="articleUrl"
+                  placeholder="https://example.com/article"
+                  value={articleUrl}
+                  onChange={(e) => setArticleUrl(e.target.value)}
+                  className="h-12 text-lg"
+                  disabled={generating}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Paste an article URL to base the script on its content
                 </p>
               </div>
 
@@ -162,7 +185,7 @@ const Generate = () => {
           <div className="mt-8 p-6 bg-muted rounded-xl border border-border">
             <h3 className="font-semibold mb-2">How it works:</h3>
             <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
-              <li>AI generates a compelling script based on your topic</li>
+              <li>AI generates a compelling script based on your topic (and article if provided)</li>
               <li>Stock footage is automatically selected from Pexels</li>
               <li>Video is rendered with animated subtitles overlay</li>
               <li>Your vertical reel is ready to download and share!</li>

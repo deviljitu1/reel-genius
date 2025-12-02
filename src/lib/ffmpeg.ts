@@ -21,7 +21,7 @@ export class FFmpegService {
     }
 
     async renderVideo(
-        videoUrl: string,
+        videoUrls: string | string[],
         audioBase64: string | null,
         script: string,
         duration: number,
@@ -30,10 +30,16 @@ export class FFmpegService {
         if (!this.loaded) await this.load();
 
         const ffmpeg = this.ffmpeg;
+        const urls = Array.isArray(videoUrls) ? videoUrls : [videoUrls];
 
-        // Write video file
-        const videoData = await fetchFile(videoUrl);
-        await ffmpeg.writeFile('input.mp4', videoData);
+        // Write video files
+        const inputFiles: string[] = [];
+        for (let i = 0; i < urls.length; i++) {
+            const fileName = `input${i}.mp4`;
+            const videoData = await fetchFile(urls[i]);
+            await ffmpeg.writeFile(fileName, videoData);
+            inputFiles.push(fileName);
+        }
 
         // Write audio file if exists
         let hasAudio = false;
@@ -44,26 +50,32 @@ export class FFmpegService {
         }
 
         // Create subtitles/text overlay
-        // For MVP, we'll split the script into lines and show them sequentially
         const lines = script.split('\n').filter(line => line.trim());
-        const durationPerLine = duration / lines.length;
 
-        // Create a complex filter for drawtext
-        // We need to load a font. For simplicity, we'll try to use a default or download one.
-        // Actually, let's use a simple SRT file approach first as it's cleaner if supported,
-        // but drawtext is more reliable without font config issues if we use default sans.
-        // However, wasm ffmpeg often needs a font file.
-        // Let's try to load a font from a CDN.
+        // Calculate duration per line based on word count
+        const totalWords = lines.reduce((acc, line) => acc + line.split(' ').length, 0);
+        let currentTime = 0;
+
+        // Load font
         const fontUrl = 'https://raw.githubusercontent.com/ffmpegwasm/testdata/master/arial.ttf';
         const fontData = await fetchFile(fontUrl);
         await ffmpeg.writeFile('arial.ttf', fontData);
 
         // Build drawtext filters
-        const filters = lines.map((line, index) => {
-            const startTime = index * durationPerLine;
-            const endTime = (index + 1) * durationPerLine;
+        const textFilters = lines.map((line) => {
+            const words = line.split(' ').length;
+            const lineDuration = (words / totalWords) * duration;
+            const startTime = currentTime;
+            const endTime = currentTime + lineDuration;
+            currentTime = endTime;
+
             // Escape single quotes and colons
             const safeLine = line.replace(/'/g, "\\'").replace(/:/g, "\\:");
+
+            // Split long lines into two if needed (simple heuristic)
+            // For now, let's just use the simple drawtext. 
+            // Ideally we would use a more complex filter for wrapping, but drawtext doesn't wrap automatically.
+            // We'll rely on the script generation to keep lines short.
 
             return `drawtext=fontfile=arial.ttf:text='${safeLine}':fontcolor=white:fontsize=48:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,${startTime},${endTime})'`;
         }).join(',');
@@ -73,22 +85,41 @@ export class FFmpegService {
         });
 
         // Construct command
-        // -i input.mp4 [-i input.mp3] -vf "filters" -c:v libx264 -preset ultrafast -c:a aac output.mp4
-        const args = ['-i', 'input.mp4'];
+        const args: string[] = [];
+        let filterComplex = '';
+
+        // Input all video files
+        inputFiles.forEach(file => {
+            args.push('-i', file);
+        });
+
         if (hasAudio) {
             args.push('-i', 'input.mp3');
         }
 
-        args.push('-vf', filters);
+        // Build filter complex for concatenation and scaling
+        // Scale all inputs to 1080x1920 and concat
+        inputFiles.forEach((_, i) => {
+            filterComplex += `[${i}:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920[v${i}];`;
+        });
 
-        // Map audio if present, otherwise just video
+        inputFiles.forEach((_, i) => {
+            filterComplex += `[v${i}]`;
+        });
+
+        filterComplex += `concat=n=${inputFiles.length}:v=1:a=0[vbase];`;
+
+        // Apply text overlay to the concatenated video
+        filterComplex += `[vbase]${textFilters}[vout]`;
+
+        args.push('-filter_complex', filterComplex);
+
+        // Map output
+        args.push('-map', '[vout]');
         if (hasAudio) {
-            // If video has audio, we might want to replace it or mix it. 
-            // For now, let's assume we replace it or just map the new audio.
-            // -map 0:v -map 1:a (use video from 0, audio from 1)
-            args.push('-map', '0:v', '-map', '1:a');
-            // Shortest to cut video to audio length or vice versa? 
-            // Usually we want video length.
+            // Map audio from the last input (which is the audio file)
+            args.push('-map', `${inputFiles.length}:a`);
+            // Cut video to audio length
             args.push('-shortest');
         }
 
