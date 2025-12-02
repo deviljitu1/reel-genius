@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       videos: {
         Row: {
+          audio_content: string | null
           created_at: string
           duration: number
           error_message: string | null
@@ -28,6 +29,7 @@ export type Database = {
           video_url: string | null
         }
         Insert: {
+          audio_content?: string | null
           created_at?: string
           duration: number
           error_message?: string | null
@@ -40,6 +42,7 @@ export type Database = {
           video_url?: string | null
         }
         Update: {
+          audio_content?: string | null
           created_at?: string
           duration?: number
           error_message?: string | null

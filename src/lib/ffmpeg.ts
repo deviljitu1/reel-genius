@@ -97,7 +97,8 @@ export class FFmpegService {
         await ffmpeg.exec(args);
 
         const data = await ffmpeg.readFile('output.mp4');
-        return new Blob([data], { type: 'video/mp4' });
+        const blobData = data instanceof Uint8Array ? data : new Uint8Array();
+        return new Blob([blobData] as BlobPart[], { type: 'video/mp4' });
     }
 }
 
