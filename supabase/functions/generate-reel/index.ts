@@ -133,12 +133,11 @@ Requirements:
         console.log('Using Pexels video:', videoUrl);
       }
     }
-    // Step 3: Generate TTS audio using Lovable AI (text-to-speech)
+    // Step 3: Generate TTS audio using ElevenLabs
     console.log('Generating voiceover audio...');
     let audioContent = null;
     
     try {
-      // Use ElevenLabs API for TTS if available
       const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
       
       if (ELEVENLABS_API_KEY) {
@@ -159,12 +158,22 @@ Requirements:
         });
 
         if (ttsResponse.ok) {
+          // Convert to base64 in chunks to avoid stack overflow
           const audioBuffer = await ttsResponse.arrayBuffer();
-          const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
-          audioContent = `data:audio/mpeg;base64,${base64Audio}`;
+          const bytes = new Uint8Array(audioBuffer);
+          let binary = '';
+          const chunkSize = 8192;
+          
+          for (let i = 0; i < bytes.length; i += chunkSize) {
+            const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+            binary += String.fromCharCode.apply(null, Array.from(chunk));
+          }
+          
+          audioContent = `data:audio/mpeg;base64,${btoa(binary)}`;
           console.log('Audio generated successfully');
         } else {
-          console.log('TTS API error:', ttsResponse.status, await ttsResponse.text());
+          const errorText = await ttsResponse.text();
+          console.log('TTS API error:', ttsResponse.status, errorText);
         }
       } else {
         console.log('No ELEVENLABS_API_KEY found, skipping audio generation');
